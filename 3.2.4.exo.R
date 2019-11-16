@@ -16,4 +16,4 @@ ggplot(data = mpg) +
 ggplot(data = mpg) + 
   geom_point(mapping = aes(x = class, y = drv))
 #this doesn't make sense, because in the axe "x" we have different class of cars
-#in the axe "y", it's their type of wheel drive, we cannot get some data.
+#in the axe "y", it's their type of wheel drive, we cannot get some data, they are all categorical.
