@@ -1,6 +1,9 @@
 library(tidyverse)
 #1
-#line geoms
+#line chart: geom_line()
+#boxplot: geom_boxplot()
+#histogram: geom_histogram()
+#area chart: geom_area()
 #2
 #I think the points and the a line will be in the same table, with different colors clissified by drv
 ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
@@ -52,7 +55,6 @@ ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
   geom_point(mapping = aes(color = drv), size = 4) + 
   geom_smooth(mapping = aes(linetype = drv), se = FALSE)
 #graphic 6
-ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
-  geom_point(size = 4)
-#here I cannot draw the shadow of the points.
-  
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(size = 6, color = "white") +
+  geom_point(aes(color = drv), size = 3)
