@@ -25,5 +25,10 @@ ggplot(data = diamonds) +
 #withou the "group = 1", the bars become the same and fill of the graphic
 ggplot(data = diamonds) + 
   geom_bar(mapping = aes(x = cut, fill = color, y = ..prop..))
+<<<<<<< HEAD
 #Without the "group = 1", the bars are stacked with different colors
 #Because the function "geom_bar" defines that the groupes are equal to the "x" values
+=======
+#Without the "group = 1", the bars are filled with different colors
+#Because the function "geom_bar" defines that the groupes are equal to the "x" values
+>>>>>>> 28dedc018a697d63ef18b01aef57f21b09cd4d8a
