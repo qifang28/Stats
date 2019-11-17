@@ -3,7 +3,7 @@ library(tidyverse)
 #The problem is overplotting, we can use jitter to find out if it's true
 ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
   geom_point(position = "jitter")
-#We see more points with jitter, so that's the problem of over plotting
+#We see more points with jitter, so the problem of the original graphic is overplotting
 #2
 ?geom_jitter
 #the 'width' and 'height' will control the amount of jittering.
