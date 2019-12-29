@@ -60,3 +60,11 @@ flights %>%
   group_by(carrier) %>%
   summarise(n = n_distinct(dest)) %>%
   arrange(-n)
+#8 For each plane, count the number of flights before the first delay of greater than 1 hour
+flights %>%
+  mutate(dep_date = time_hour) %>%
+  group_by(tailnum) %>%
+  arrange(dep_date) %>%
+  mutate(cumulative = !cumany(arr_delay > 60)) %>%
+  filter(cumulative == TRUE) %>%
+  tally(sort = TRUE)
