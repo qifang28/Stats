@@ -68,3 +68,4 @@ flights %>%
   mutate(cumulative = !cumany(arr_delay > 60)) %>%
   filter(cumulative == TRUE) %>%
   tally(sort = TRUE)
+# This code is copied, I'm trying to understand all the functions
