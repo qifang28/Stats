@@ -66,12 +66,12 @@ flights %>%
 
 flights %>%
   group_by(carrier) %>%
-  summarise(n= n(),
+  summarise(n = n(),
             dep_max = max(dep_delay, na.rm = TRUE),
             arr_max = max(arr_delay, na.rm = TRUE)) %>%
   #arrange(desc(dep_max, arr_max)) %>%
-  filter(1:n() == 1)
-
+  #filter(1:n() == 1)
+  top_n(1, n())
 #6 What does the sort argument to count() do. When might you use it?
 # when we count the number and want to sort the result
 flights %>%
