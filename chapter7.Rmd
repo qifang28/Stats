@@ -1,0 +1,150 @@
+---
+title: "exo chapter 7"
+output: html_notebook
+---
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+7.5.1.1 and after not finished
+```{r try}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+```{r import packages}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+
+#diamonds %>%
+ # count(cut_width(carat, 0.5))
+#smaller <- diamonds %>%
+ # filter(carat < 3)
+```
+exo 7.3.4
+1. Explore the distribution of each of the x, y, and z variables in diamonds. What do you learn? Think about a diamond and how you might decide which dimension is the length, width, and depth.
+```{r 7.3.4 1-1}
+summary(select(diamonds, x, y, z))
+ggplot(data = diamonds) +
+  geom_histogram(mapping = aes(x = x), binwidth = 0.5)
+ggplot(data = diamonds) +
+  geom_histogram(mapping = aes(x = y), binwidth = 0.5)
+ggplot(data = diamonds) +
+  geom_histogram(mapping = aes(x = z), binwidth = 0.5)
+```
+In the summary, except Min and Max, all the values of 'x' and 'y' are larger tha 'z', all th values of 'y' is a little larger than 'x', here I suppose that 'x' is length, 'y' is width, and 'z' is depth.
+But we can see that the Max value od 'y' and 'z' is not canonical. We don't have a diamonds that is wide as 5 cm, so it is possible that there are some wrong registration. In the previous analyse of this chapter, we know that there are many zero in 'x' 'y' and 'z', so we should not consider the empty values and the wrong values and to see the result again. 
+```{r 7.3.4 1-2}
+filter(diamonds, x > 0, x < 10) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = x), binwidth = 0.01) 
+  
+filter(diamonds,  x > 0, x < 10) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = y), binwidth = 0.01) 
+
+filter(diamonds, x > 0, x < 10) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = z), binwidth = 0.01) 
+```
+Here I keep the previous hypothesis, 'x' is length, 'y' is width, and 'z' is depth.
+
+2. Explore the distribution of price. Do you discover anything unusual or surprising? (Hint: Carefully think about the binwidth and make sure you try a wide range of values.)
+```{r 7.3.4 2-1}
+ggplot(data = diamonds) +
+  geom_histogram(mapping = aes(x = price), binwidth = 5)
+```
+After trying different value for binwidth, when the binwidth is small as 0.01 or 0.5, the value scale in the y axe is too large and in x axe is two thin to remark some thing unusual, and it takes long time to calculate. finally I fixed 5.
+We see that there is a fossa between 0 and 2500, so we use the filter to keep this area and to see it precisely.
+```{r 7.3.4 2-2}
+filter(diamonds, price < 2500) %>%
+ggplot() +
+  geom_histogram(mapping = aes(x = price), binwidth = 5)
+```
+
+```{r 7.3.4 2-3}
+filter(diamonds, price > 1400, price < 1600) %>%
+ggplot() +
+  geom_histogram(mapping = aes(x = price), binwidth = 5)
+```
+Here we see clearly there are no diamonds priced betwwen $1463 and $1536 
+
+3. How many diamonds are 0.99 carat? How many are 1 carat? What do you think is the cause of the difference?
+```{r 7.3.4 3-1}
+diamonds %>%
+  count(carat == 0.99)
+diamonds %>%
+  count(carat == 1)
+```
+There are 23 diamonds that are 0.99 carat, 1558 are 1 carat
+```{r 7.3.4 3-2}
+filter(diamonds, carat <=1.02, carat >= 0.97) %>%
+  ggplot(mapping = aes(x = carat, y = price, color = cut)) +
+  geom_col()
+```
+Here we see that the diamonds more than 1 carat has a price much more high than the diamonds of 0.99 carat, so it's possible that if they can have a diamonds of 1 carat, they won't make it 0.99, so there are few diamonds of 0.99 carat
+
+4. Compare and contrast coord_cartesian() vs xlim() or ylim() when zooming in on a histogram. What happens if you leave binwidth unset? What happens if you try and zoom so only half a bar shows?
+coord_cartesian()
+Setting limits on the coordinate system will zoom the plot (like you're looking at it with a magnifying glass), and will not change the underlying data like setting limits on a scale will.
+since the histogram bins have already been calculated, it is unaffected.
+xlim() ylim()
+supplying the limits argument to the individual scales, they drop data observations. If the binwidth is not setted, the look of the graph will be affected due to the dropped data.
+
+7.4.1
+1. What happens to missing values in a histogram? What happens to missing values in a bar chart? Why is there a difference?
+
+```{r 7.4.1}
+dia <- diamonds %>%
+ mutate(y = ifelse(y < 3 | y > 20, NA, y))
+ggplot(data = dia, mapping = aes(x = y)) +
+ geom_histogram()
+ggplot(data = dia, mapping = aes(x = y)) +
+ geom_bar()
+```
+For geom_histogram
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+Removed 9 rows containing non-finite values (stat_bin).
+For geom_bar	
+Removed 9 rows containing non-finite values (stat_count).
+
+2. What does na.rm = TRUE do in mean() and sum()?
+```{r}
+a <- c(1,2,3,4,NA,NA,NA,NA)
+mean(a, na.rm = TRUE)
+sum(a, na.rm = TRUE)
+```
+na.rm = TRUE means remove the values that equal to NA then do the calculation
+
+7.5.1.1
+Use what you’ve learned to improve the visualisation of the departure times of cancelled vs. non-cancelled flights.
+```{r 7.5.1.1 1}
+nycflights13::flights %>% 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + sched_min / 60
+  ) %>% 
+  ggplot(mapping = aes(x = cancelled, y = sched_dep_time)) + 
+    geom_boxplot()
+```
+What variable in the diamonds dataset is most important for predicting the price of a diamond? How is that variable correlated with cut? Why does the combination of those two relationships lead to lower quality diamonds being more expensive?
+Variables that influence the price are 'carat', 'cut', 'color', 'clarity'，Shape and Fluorescence, but Shape and Fluorescence are not in this table, so we consider the four C.
+```{r 7.5.1.1 2}
+ggplot(data = diamonds, aes(x = carat, y = price, colour = clarity)) +
+  geom_point()
+ggplot(data = diamonds, aes(x = carat, y = price, colour = cut)) +
+  geom_point()
+
+```
+It is evident that with the larger the carat are, the higher the price are, but cut and clarity play some important roles too, it is not obvious here, but we see that when the carat is large, but the cut pr clarity are not so good, the price is not so high neither.
+But the points are numerous and they cover each other, so the boxplot() should be used. 
+mapping = aes(group = cut_width(carat, 0.1))
+```{r}
+#ggplot(data = diamonds, mapping = aes(x = carat, y = price)) +
+ # geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)))
+```
+
