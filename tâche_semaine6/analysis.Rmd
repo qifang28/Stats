@@ -1,0 +1,133 @@
+---
+title: "Comparing unsupervised speech learning directly to human performance in speech perception: Cog Sci 2019"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r include=FALSE}
+library(magrittr)
+library(ggplot2)
+correct_ipa <- function(data){
+  data <- data %>%
+  dplyr::mutate(vowel_eng = 
+                  ifelse(vowel_eng == "AE", "æ",
+                  ifelse(vowel_eng == "UH", "ʊ",
+                  ifelse(vowel_eng == "AH", "ʌ", 
+                  ifelse(vowel_eng == "IH", "ɪ", vowel_eng)))),
+                vowel_fr =
+                  ifelse(vowel_fr == "A", "a",
+                  ifelse(vowel_fr == "E", "ɛ", 
+                  ifelse(vowel_fr == "OE", "œ",
+                  ifelse(vowel_fr == "O", "ɔ",
+                  ifelse(vowel_fr == "Y", "y",
+                  ifelse(vowel_fr == "U", "u",
+                  ifelse(vowel_fr == "I", "i", vowel_fr)))))))
+                  )
+  return(data)
+}
+correct_ipa_context <- function(data){
+  data <- data %>%
+  dplyr::mutate(context = 
+                  ifelse(context == "V_Z", "v_z",
+                  ifelse(context == "V_K", "v_k",
+                  ifelse(context == "SH_S", "ʃ_s", 
+                  ifelse(context == "Z_G", "z_g", 
+                  ifelse(context == "V_P", "v_p", 
+                  ifelse(context == "Z_D", "z_d",
+                  ifelse(context == "Z_B", "z_b",
+                  ifelse(context == "SH_B", "ʃ_b", 
+                  ifelse(context == "V_SH", "v_ʃ",
+                  ifelse(context == "Z_SH", "z_ʃ",
+                  ifelse(context == "SH_V", "ʃ_v",       
+                  ifelse(context == "V_F", "v_f", tolower(context))))))))))))))
+  return(data)
+}
+emd_theme <- function(text_size=18) {
+  return(ggplot2::theme_bw() +
+           ggplot2::theme(text=ggplot2::element_text(size=text_size),
+                          legend.position="bottom"))
+}
+```
+
+```{r load-data, include=FALSE}
+distances_eng_dpgmm <- readr::read_csv("data/English_1501_vtln_kl_div_final.csv") %>%
+                       dplyr::rename(distance_eng_dpgmm_TGT=distance_TGT,
+                                     distance_eng_dpgmm_OTH=distance_OTH)
+distances_fr_dpgmm <- readr::read_csv("data/French_1501_vtln_kl_div_final.csv") %>%
+                       dplyr::rename(distance_fr_dpgmm_TGT=distance_TGT,
+                                     distance_fr_dpgmm_OTH=distance_OTH)
+distances_mfcc <- readr::read_csv("data/mfccs_kaldi_cosine_final.csv") %>%
+                  dplyr::rename(distance_mfcc_TGT=distance_TGT,
+                                distance_mfcc_OTH=distance_OTH)
+humans <- readr::read_csv("data/experiment_data.csv",
+                 col_types=readr::cols(survey_time=readr::col_character())) %>%
+  dplyr::select(-dplyr::contains("dist"), -X1) %>%
+  dplyr::mutate(subject_language=ifelse(subject_language == "fr2", "fr",
+                                        subject_language))
+results <- dplyr::left_join(humans, distances_eng_dpgmm) %>%
+  dplyr::left_join(distances_fr_dpgmm) %>%
+  dplyr::left_join(distances_mfcc) %>%
+  dplyr::mutate(delta_eng_dpgmm=distance_eng_dpgmm_OTH-distance_eng_dpgmm_TGT,
+                delta_fr_dpgmm=distance_fr_dpgmm_OTH-distance_fr_dpgmm_TGT,
+                delta_mfcc=distance_mfcc_OTH-distance_mfcc_TGT,
+                delta_eng_dpgmm_s=scale(delta_eng_dpgmm, center=FALSE)[,1],
+                delta_fr_dpgmm_s=scale(delta_fr_dpgmm, center=FALSE)[,1],
+                delta_mfcc_s=scale(delta_mfcc, center=FALSE)[,1],
+                corr_ans_c=ifelse(CORR_ANS=="A", -1, 1),
+                subject_language_c=ifelse(subject_language=="eng", -1, 1)) %>%
+  correct_ipa %>% correct_ipa_context
+```
+
+```{r n}
+humans %>%
+  dplyr::select(subject_id, subject_language) %>%
+  dplyr::distinct() %>%
+  dplyr::group_by(subject_language) %>%
+  dplyr::summarize(dplyr::n()) %>%
+  dplyr::ungroup()
+```
+
+```{r global-abx-scores}
+summary_overall <- results %>%
+  dplyr::group_by(tripletid, context, vowel_fr, vowel_eng) %>%
+  dplyr::summarize(ABX_eng_dpgmm=delta_eng_dpgmm[1]>0,
+                   ABX_fr_dpgmm=delta_fr_dpgmm[1]>0,
+                   ABX_mfcc=delta_mfcc[1]>0,
+                   ABX_human=mean(user_corr)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(context, vowel_fr, vowel_eng) %>%
+  dplyr::summarize_at(dplyr::vars(dplyr::starts_with("ABX_")), mean) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(vowel_fr, vowel_eng) %>%
+  dplyr::summarize_at(dplyr::vars(dplyr::starts_with("ABX_")), mean) %>%
+  dplyr::ungroup() %>%
+  dplyr::summarize_at(dplyr::vars(dplyr::starts_with("ABX_")), mean)
+summary_overall
+```
+
+```{r abx-by-language}
+results %>%
+  dplyr::group_by(subject_language, tripletid, context, vowel_fr, vowel_eng) %>%
+  dplyr::summarize(ABX_human=mean(user_corr)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(subject_language, context, vowel_fr, vowel_eng) %>%
+  dplyr::summarize_at(dplyr::vars(dplyr::starts_with("ABX_")), mean) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(subject_language, vowel_fr, vowel_eng) %>%
+  dplyr::summarize_at(dplyr::vars(dplyr::starts_with("ABX_")), mean) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(subject_language) %>%
+  dplyr::summarize_at(dplyr::vars(dplyr::starts_with("ABX_")), mean) %>%
+  dplyr::ungroup()
+```
+
+```{r abx-by-language}
+fr_en <- results %>%
+  dplyr::group_by(subject_language, vowel_fr, vowel_eng) %>%
+  dplyr::summarize(ABX_human = mean(user_corr))
+ggplot2::ggplot(fr_en) +
+  ggplot2::geom_raster(mapping = aes(x = vowel_fr, y = vowel_eng, fill = ABX_human)) +
+  facet_wrap (~ subject_language)
+```
+
