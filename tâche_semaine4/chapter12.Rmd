@@ -1,0 +1,206 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+12.6.1 1-2 not finished
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r import pakages}
+library(tidyverse)
+library(ggplot2)
+```
+1. Using prose, describe how the variables and observations are organised in each of the sample tables.
+table1 variables are in colomns, 'country' for country names, year for integer year, 'case' for numbers of cases, 'population' for number of population.
+each row we see the values of country and year and the population and the cases
+the variables are in cells
+table2 values are in colomns but in the 'type' variable, cases and populations are two kinds of variables, thus in the 'count' variable, the numbers are not the same type of values.
+table3 the values of cases and of population are in the same colomn.
+table4a In the colomns of '1999' '2000', we don't get what values are presented
+table4b Same problem with table 4a
+
+2. Compute the rate for table2, and table4a + table4b. You will need to perform four operations:
+
+   1. Extract the number of TB cases per country per year.
+   2. Extract the matching population per country per year.
+   3. Divide cases by population, and multiply by 10000.
+   4. Store back in the appropriate place.
+   Which representation is easiest to work with? Which is hardest? Why? 
+For now, table2 is easier to work with, table4a + 4B is harder because we haven't learned gathering yet.
+```{r 12.2.3 2}
+tidyr::table1
+tidyr::table2
+tidyr::table3
+tidyr::table4a
+tidyr::table4b
+tidyr::table5
+tidyr::table6
+```
+3. Recreate the plot showing change in cases over time using table2 instead of table1. What do you need to do first?
+Firstly filter the table to get the cases values
+```{r 12.2.3 3}
+tidyr::table2 %>%
+  filter(type == "cases") %>%
+  ggplot(aes(year, count)) +
+  geom_line(aes(group = country), colour = "grey50") +
+  geom_point(aes(colour = country))
+  labs(x = 'year', y = 'cases')
+```
+12.3.3 
+1. Why are gather() and spread() not perfectly symmetrical?
+Both spread() and gather() have a convert argument. What does it do?
+```{r 12.3.3 1}
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+stocks %>% 
+  spread(year, return) %>% 
+  gather("year", "return", `2015`:`2016`)
+```
+Because there wasn't colomn type information in the original tibble.
+After spread(), we see that year is character type.
+convert is to change the value type.
+
+2. Why does this code fail?
+```{r 12.3.3 2}
+tidyr::table4a %>% 
+  gather(1999, 2000, key = "year", value = "cases")
+```
+Because '1999' and '2000' are not non-syntactic variable names, we should add '' to preceise that it's not numeric.
+```{r}
+tidyr::table4a %>% 
+  gather('1999', '2000', key = "year", value = "cases")
+```
+3. Why does spreading this tibble fail? How could you add a new column to fix the problem?
+```{r 12.3.3 3-question}
+people <- tribble(
+  ~name,             ~key,    ~value,
+  #-----------------|--------|------
+  "Phillip Woods",   "age",       45,
+  "Phillip Woods",   "height",   186,
+  "Phillip Woods",   "age",       50,
+  "Jessica Cordero", "age",       37,
+  "Jessica Cordero", "height",   156
+)
+```
+Because the variable names and the function names are the same. so we need some operations to distinct the variable names and the funtion names.
+Add a colomn that indicate the row number can be a solution because the row number is unique
+```{r 12.3.3 3}
+people1 <- people %>%
+  group_by(name, key) %>%
+  mutate(RN = row_number())
+spread(people1, key, value)
+```
+4. Tidy the simple tibble below. Do you need to spread or gather it? What are the variables?
+```{r 12.3.3 4-question}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+```
+Firstly we need a variable named sex to store the value of mal or female, and a variable names to indicate the number. So we need to gather it.
+```{r 12.3.3 4}
+preg1 <- preg %>%
+  gather(male, female, key = "genre", value = "count", na.rm = TRUE)
+preg1
+```
+
+```{r}
+tidyr::table3 %>%
+  #separate(rate, into = c("cases", "population"))
+  #separate(rate, into = c("cases", "population"), sep = "/")
+  separate(rate, into = c("cases", "population"), convert = TRUE)
+```
+```{r}
+tidyr::table5 %>%
+  unite(new, century, year, sep = "")
+```
+12.4.3
+1. What do the extra and fill arguments do in separate()? Experiment with the various options for the following two toy datasets.
+```{r 12.4.3 1}
+tibble(x = c("a,b,c", "d,e,f,g", "h,i,j")) %>% 
+  separate(x, c("one", "two", "three"))
+
+tibble(x = c("a,b,c", "d,e", "f,g,i")) %>% 
+  separate(x, c("one", "two", "three"))
+```
+It will throw away the values if there are extra values, mark as NA if there aren't enough values. No warning.
+
+2. Both unite() and separate() have a remove argument. What does it do? Why would you set it to FALSE?
+It throw away the input colomn. To set 'FALSE' to not to do this.
+
+3. Compare and contrast separate() and extract(). Why are there three variations of separation (by position, by separator, and with groups), but only one unite?
+?seprate Separate a character column into multiple columns using a regular expression separator
+?extract Extract a character column into multiple columns using regular expression groups
+
+12.5.1
+1. Compare and contrast the fill arguments to spread() and complete().
+fill() takes a set of columns where you want missing values to be replaced by the most recent non-missing value (sometimes called last observation carried forward).
+complete() takes a set of columns, and finds all unique combinations. It then ensures the original dataset contains all those values, filling in explicit NAs where necessary.
+
+2. What does the direction argument to fill() do?
+Direction in which to fill missing values. Currently either "down" (the default), "up", "downup" (i.e. first down and then up) or "updown" (first up and then down).
+
+12.6.1
+
+```{r 12.6.1}
+#tidyr::who
+who1 <- tidyr::who %>% 
+  gather(new_sp_m014:newrel_f65, key = "key", value = "cases", na.rm = TRUE) %>% 
+  mutate(key = stringr::str_replace(key, "newrel", "new_rel")) %>% 
+  separate(key, c("new", "type", "sexage"), sep = "_") %>%
+  select(-new, -iso2, -iso3) %>% 
+  separate(sexage, c("sex", "age"), sep = 1)
+who1
+```
+1. In this case study I set na.rm = TRUE just to make it easier to check that we had the correct values. Is this reasonable? Think about how missing values are represented in this dataset. Are there implicit missing values? What’s the difference between an NA and zero?
+We have to see how the missing values are presented, because if there is no 0, then NA is represented to indicate the zero value, so we will chek if there are zero.
+```{r 12.6.1 1-1}
+who1 %>%
+  filter(cases == 0) %>%
+  nrow()
+who1 %>%
+  filter(is.na(cases)) %>%
+  nrow()
+```
+here zero id presented to explicate the value that equals to zero, so NA present the missing value.
+Then checking the NA situation.
+```{r 12.6.1 1-2}
+gather(who, new_sp_m014:newrel_f65, key = "key", value = "cases") %>%
+  group_by(country, year) %>%
+  mutate(prop_missing = sum(is.na(cases)) / n()) %>%
+  filter(prop_missing > 0, prop_missing < 1)
+```
+
+
+
+2. What happens if you neglect the mutate() step? (mutate(key = stringr::str_replace(key, "newrel", "new_rel")))
+If we don't do this operation, we won't seperate correctly the type and the sex and age, because for the value like new_sp_m014, if we seperate wit "_", we will get three values, we need three varables, but for "newrel_m014" we will get two values, and the third one will be replaced by NA or other things, it will influence much the data.
+
+3. I claimed that iso2 and iso3 were redundant with country. Confirm this claim.
+`iso2` and `iso3` contain the 2- and 3-letter country abbreviations for the country. 
+```{r}
+E3 <- tidyr::who %>% 
+  gather(new_sp_m014:newrel_f65, key = "key", value = "cases", na.rm = TRUE) %>% 
+  mutate(key = stringr::str_replace(key, "newrel", "new_rel")) %>% 
+  separate(key, c("new", "type", "sexage"), sep = "_") 
+select(E3, country, iso2, iso3) %>%
+  distinct() %>%
+  group_by(country) %>%
+  filter(n() > 1)
+```
+
+4. For each country, year, and sex compute the total number of cases of TB. Make an informative visualisation of the data.
+```{r}
+who1 %>%
+  group_by(country, year, sex) %>%
+  filter(year > 1995) %>%
+  summarise(cases = sum(cases)) %>%
+  #unite(country_sex, country, sex, remove = FALSE) %>%
+  ggplot(aes(x = country, y = cases, colour = year)) +
+  geom_col() +
+  facet_wrap(~ sex)
+```
