@@ -1,19 +1,169 @@
 ---
-title: "final_project"
+title: "Data exploration with Gibson and Wu's data"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
-
-```{r}
-plot(cars)
+```{r pakages}
+library(magrittr)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(fmsb)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+```{r}
+#data <- read.table("gibsonwu2012data.txt")
+data <- read.table("gibsonwu2012data.txt", header = TRUE,
+                      stringsAsFactors = FALSE)
+data
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+I Explication of the data:
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+Data structure:
+This data's structure bears some ressemblance with the data "e1clean.txt" that we've seen during the class. 
+There are 9 variables but 10 colomns.
+The first colomn corresponds to the index number. The numbers are not continuous. According to the article, there are somme missing values, so I can confirm that the first colomn is simply the index and so that it is useless for this work.
+After reading another Nicenboim article [1] which contains some analysis by using the same data, I am convinced that the numbers in the first column are not crucial to the data analysis. So read.table() is the best and the simplest function to load the table in R to do some analysis (with read_delim of the package readr, we lose the last colomn).
 
+Variables:
+1. "subj"
+Thirty seven participants. (#count(subj), 37 rows, n = 75)
+```{r 0}
+data %>%
+  count(subj)
+```
+2. "item"
+Fifteen items. (#count(item), 15 rows)
+("In the Gibson and Wu dataset, we have 37 participants and 15 items" Page 7)
+3. "type"
+two values: subj-ext, obj-ext (ext is the abbreviation of extraction)
+4. "pos"
+Part of speech, four values (#count(pos), 4 rows)
+5. "word"
+Fourty seven words (#count(word), 47 rows)
+6. "correct"
+only one value "-". Only correct values are chosen. So in the treatment we can ignore this variable.
+7. "rt"
+Reading time of the words (ms)
+8. "region"
+Five values: de, de1, dehnoun, headnoun, headnoun1 (#count(region), 5 rows, n = 547), abbreviations of five types of headnoun in Chinese mandarin
+9. "type2"
+Two values: object relative, subject relative, they refer to object and subject relative clauses.
+Here "type2" is the precised type of the headnoun. In fact, the variable "type" and "type2" have the same value. We just need to choose one of them to make the analysis.  
+
+Besides, according to these variables, we can obtain 37 participants, each participant has read in total 75 times, including  15 items, for 5 different regions.
+
+Random variables:
+"rt": a discrete random variable. 
+The original use of this data is to "compare reading times at the head noun for subject and object relative clauses and argued for facilitation in the case of object relative clauses." (Page 8). "rt" is the only random variable to analyse, so it is a variable that is particularly important.
+We don't have any continuous random variables in this data.
+"subj" and "item", "region" and "words" can also be random variables, but in this data they are fixed by the author, we won't do some experiments to get more data.
+
+II Questions and exploration of the data
+
+Question 1
+What's the difference of the reading times at headnoun for subject and objective relative clauses?
+
+Visualisation 1:
+Visualisation of the mean reading time at headnoun for subject and objective relative.
+```{r Visualisation 1}
+mean_rt <- data %>%
+  dplyr::group_by(region, type2) %>%
+  dplyr::summarise(
+  mRTt = mean(rt)
+  )  %>%
+  ungroup()
+ggplot2::ggplot(data = mean_rt, mapping = aes(x = region, y = mRTt, group = type2, linetype = type2)) +
+  geom_line() +  
+  geom_point() +
+  labs(x = "Headnouns", y = "Average reading time")
+```
+By calculating the mean reading time, we get the same result of the original use "argued for facilitation in the case of object relative clauses.", i.e. the object relative clauses have a shorter average reading time.
+But this analysis is too basic and not deep enough. So we need to explore more about this data.
+
+Question 1.5
+Can Radar chart presente the result clearer and more elegantly ?
+(This question doesn't help to explore futher this data, but it's just my interest to see other kind of presentation.)
+Visualisation 1.5:
+```{r Visualisation 1.5}
+radarfig <- mean_rt %>%
+  tidyr::spread(key = region, value = mRTt) %>%
+  dplyr::select(-type2)
+
+rownames(radarfig) <- paste(letters[1:2])
+
+radarfig <-rbind(rep(1200,5),rep(0,5), radarfig) 
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+
+fmsb::radarchart(radarfig, axistype=1,
+           pcol=colors_border , pfcol=colors_in , plwd=4 , plty=1,
+    #custom the grid
+    cglcol="black", cglty=1, axislabcol="grey", caxislabels=seq(0,1200,300), cglwd=0.8,
+    #custom labels
+    vlcex=0.8 
+    )
+legend(x=0.7, y=1, legend = rownames(radarfig[c(3,4),]), bty = "n", pch=20 , col=colors_in , text.col = "grey", cex=1.2, pt.cex=3)
+```
+(When using spread() to reorganize the mean_rt table, I am convinced that variable "type" and "type2" refer to the same catagory.)
+With line chart, we see clearly the different average reading time, but it seems that there are an order and a value trend for the reading time. In fact in the x axis, the variables are not continuous, we don't have any reading time trend to predict. At first I think about other representation like barplot or Lollipop chart. As they are all presented in a graph with x and y axis, they have the same little default with the geom_line(). So I tried Radar chart which don't have the limit for the axis.
+In my opinion, Radar chart for this presentation is clearer than the line chart, but it is not necessary and not so elegant for a linguistic research analysis. It can present more than the size of value. With an overall view of different elements, Radar chart is more appropriate for analysing and comparing the weak points and advantages. With the complicated colour style of the code, we make effort for this data for nothing.
+I confess that I don't master the Radar chart, but the analysis above is not by prejudice.
+
+Question 2
+How's the distribution of different participant's reading times at headnouns?
+```{r Visualisation 2}
+subj_rt <- data %>%
+  dplyr::select(subj, rt, region) 
+ggplot2::ggplot(subj_rt, mapping = aes(x = subj, y = rt, colour = region)) +
+  ggplot2::scale_x_continuous(breaks = unique(subj_rt$subj)) +
+  ggplot2::geom_point(position = "jitter") +
+  labs(x = "Participants", y = "Reading time")
+ggplot2::ggplot(subj_rt, mapping = aes(x = subj, y = rt, colour = region)) +
+  ggplot2::scale_x_continuous(breaks = unique(subj_rt$subj)) +
+  ggplot2::geom_smooth() +
+  labs(x = "Participants", y = "Reading time")
+```
+I proposed this question because for the same headnoun, if each participant has a reading time completely different, the average time makes no sense. So I made a scatter plot to see the distribution of every participant's case, and then a linear trend to see the general reading time.
+We see in the first table that there are some reading times that are not canonical, we don't know if it's influenced by the words length or if it is a coincidence. Because every category of headnoun contains 547 words read by differents participants, we are do not need to examine every situation. Fortunately these cases are not numerous. Besides, the linear trend in the second graphic tell us that the participants reading time of each category of headnoun are stable, it's not strange. So the former comparison makes sense. 
+
+Question 3
+How's the distribution of different participant's reading times for the same words?
+That means are there great difference of reading the same word for different participants?
+```{r Visualisation 3}
+word_rt <- data %>%
+  dplyr::group_by(word, subj, rt, region) %>%
+  dplyr::summarize(word_mt = mean(rt))
+ggplot2::ggplot(word_rt) +
+  ggplot2::geom_tile(mapping = aes(x = subj, y = word, fill = word_mt)) +
+  ggplot2::scale_x_continuous(breaks = unique(word_rt$subj)) +
+  #facet_wrap (~region) +
+  labs(x = "Participants", y = "Chinese words") +
+  theme_grey(base_family = "STKaiti")  #to show the chinese caracter
+```
+By making the graph, I realized that this question makes no great sense. I wanted to see more in details the reading time for each words, but it seems complicated and useless for the former comparison. But inspired by the word "word", I would like to modify the question as: the reading times of differents semantic categories (e.g. action, state, property) by different group of participants. Then the informations of the data is insufficient so that the table is illegible.
+To have enough informations to answer this question, three things should be considered.
+1. The semantic categories of the words in the y axis.
+2. It would be more meaningful if we had a larger number of participants, themselves grouped according to their socio-professional status, in the x axis
+Then we can consider the influence of semantic catagories for words reading time.
+3. Last but not least, the words length should be considered. Not only for this graph, but also for the three former graphs. We compare the reading time of different types of clause but no detailed informations about the controlled word length are mentioned. We can not say that the reading time of a three caracter word is longer than a single caracter word, so the semantic category of the three caracter word has an influence on the reading time.
+
+Question 4
+In the table, part of speech is noted too, but I haven't seen some analysis about it. Are reading times influenced by part of speech? The covariation of headnouns and part of speech?
+```{r Visualisation 4}
+#pos_rt <- data %>%
+ # dplyr::group_by(region, pos) %>%
+  #ungroup()
+ggplot(data, mapping = aes(x = region, y = pos, fill = rt)) +
+  geom_tile() +
+  facet_wrap (~type2) +
+  labs(x = "Headnouns", y = "Part of speech")
+```
+We see in this table that when the de1 has the part of speech 6, the objective relative clause's reading time is longer than the subject relative clause. In other situation, we don't see the covariation de headnouns and part of speech. But it's enough to tell that there exist the covariation of part of speech and headnoun. I think this is a point worth to further study about.
+
+Self evaluation of this work:
+I chose this data to make some data games because I thought that this data was not complicated and I didn't think that I could master the R language. But I was wrong. Firstly, this table is not complicated but if we want to dig the informations, we need lots of theoretical knowledge in both statistics and in linguistics to get some really interesting content. Secondly, after doing the exercises in the "R fot Data Science", I could try to treat the data that combines different tables, ot a table with complicated data structure. The code for this data is too simple. But I won't stop here, I will play with other data to make progress.
+
+[1]
+https://vasishth.github.io/Goettingen_brms_intro/exercises/05_01_BayesFactors.pdf?nsukey=Zuxek8ooJVtkYs%2Boe18yFH%2FXCO0C6gjlGAseydGkY%2FtG7DFNcWd9LrEUOC43Jogw44jFUaqzMyCL0Tw97BFqFvnt2kkihAhjE4lOVrkLqECRKFnW%2B7gzRuqcYr%2Boob%2Fgo3fxO%2FOC7yOUukoU8PyHawuSpxY4RDIvTYlnQ2PrY2r%2Bl75pT1ptPPHUgr9Pwy8ktc2KcVPZ3G%2FL%2BkmJ19fsgQ%3D%3D
